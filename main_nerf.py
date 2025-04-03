@@ -1,5 +1,21 @@
 import torch
 
+# Check what device_count returns
+original_count = torch.cuda.device_count()
+print("Original device count:", original_count)
+
+# If device_count is 0, override it to return 1
+if original_count == 0:
+    torch.cuda.device_count = lambda: 1
+
+# Attempt to set device 0 and query its name
+try:
+    torch.cuda.set_device(0)
+    device_name = torch.cuda.get_device_name(0)
+    print("Using device:", device_name)
+except Exception as e:
+    print("Error when setting device:", e)
+
 from nerf.options import config_parser
 from nerf.provider import NeRFDataset
 from nerf.gui import NeRFGUI
@@ -7,6 +23,7 @@ from nerf.utils import *
 
 from functools import partial
 from loss import huber_loss
+
 
 # torch.autograd.set_detect_anomaly(True)
 
