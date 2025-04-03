@@ -19,3 +19,7 @@ exps
 **.pyd
 
 configs_bak/
+
+condor
+logs
+data
