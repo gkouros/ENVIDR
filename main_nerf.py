@@ -12,7 +12,7 @@ from loss import huber_loss
 
 if __name__ == '__main__':
 
-    
+
     opt = config_parser()
 
     # if opt.debug:
@@ -22,7 +22,7 @@ if __name__ == '__main__':
         opt.fp16 = True
         opt.cuda_ray = True
         opt.preload = True
-    
+
     if opt.patch_size > 1:
         opt.error_map = False # do not use error_map if use patch-based training
         # assert opt.patch_size > 16, "patch_size should > 16 to run LPIPS loss."
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         from nerf.network import NeRFNetwork
 
     print(opt)
-    
+
     seed_everything(opt.seed)
 
     env_opt = None
@@ -53,7 +53,7 @@ if __name__ == '__main__':
         # elif opt.sph_renderer == 'mitsuba':
         #     from nerf.sph_loader_mi import EnvDataset
         #     from nerf.sph_loader_mi import config_parser
-        
+
         env_opt = config_parser(env_dataset_config)
 
     model = NeRFNetwork(
@@ -76,7 +76,7 @@ if __name__ == '__main__':
         opt=opt,
         env_opt=env_opt
     )
-    
+
     print(model)
 
     if opt.color_l1_loss:
@@ -103,25 +103,25 @@ if __name__ == '__main__':
         # for i in range(11):
         #     unwrap_env_sphere(trainer, device, material=material, env_net_index=i, use_specular_color=True)
         print("unwrap done")
-        exit()   
+        exit()
 
     if opt.test:
-        
+
         metrics = [PSNRMeter(),] # LPIPSMeter(device=device)]
         trainer = Trainer('ngp', opt, model, device=device, workspace=opt.workspace, criterion=criterion, fp16=opt.fp16, metrics=metrics, use_checkpoint=opt.ckpt)
-                
+
         if opt.cuda_ray and opt.extra_state_full_update:
             with torch.cuda.amp.autocast(enabled=opt.fp16):
                 model.reset_extra_state()
                 model.update_extra_state(full_update=True)
                 for i in range(16):
                     model.update_extra_state(full_update=True)
-                    
+
 
         if opt.gui:
             gui = NeRFGUI(opt, trainer)
             gui.render()
-        
+
         else:
             if opt.debug:
                 test_id = [opt.debug_id]
@@ -136,15 +136,15 @@ if __name__ == '__main__':
             cfg_train_opt(opt, trainer.epoch)
             if opt.dir_only:
                 opt.indir_ref = False
-            
+
             if test_loader.has_gt:
                 # TODO: env_rot_degree_range
                 trainer.evaluate(test_loader, None, opt.env_rot_degree_range) # blender has gt, so evaluate it.
-    
+
             # trainer.test(test_loader, write_video=True) # test and save video
-            
+
             # trainer.save_mesh(resolution=256, threshold=10)
-    
+
     else:
 
         optimizer = lambda model: torch.optim.Adam(model.get_params(opt.lr, opt.plr, opt.slr, opt.elr), betas=(0.9, 0.99), eps=1e-15)
@@ -162,13 +162,13 @@ if __name__ == '__main__':
                     ema_decay=0.95 if not opt.geometric_init else None,
                     fp16=opt.fp16, lr_scheduler=scheduler, scheduler_update_every_step=True, metrics=metrics, \
                     use_checkpoint=opt.ckpt, eval_interval=opt.eval_interval, max_keep_ckpt=opt.max_keep_ckpt)
-        
+
         # cfg_train_opt(opt, trainer.epoch)
 
         if opt.gui:
             gui = NeRFGUI(opt, trainer, train_loader)
             gui.render()
-        
+
         else:
 
             if opt.debug:
@@ -176,19 +176,19 @@ if __name__ == '__main__':
             else:
                 test_id = opt.test_ids if len(opt.test_ids) > 0 else None
             if opt.env_sph_mode:
-                valid_loader = EnvDataset(env_opt, opt=opt, device=device, type='val', downscale=1).dataloader(test_ids=test_id, test_skip=opt.test_skip)
+                valid_loader = EnvDataset(env_opt, opt=opt, device=device, type='test', downscale=1).dataloader(test_ids=test_id, test_skip=opt.test_skip)
             else:
-                valid_loader = NeRFDataset(opt, device=device, type='val', downscale=1).dataloader(test_ids=test_id, test_skip=opt.test_skip)              
+                valid_loader = NeRFDataset(opt, device=device, type='test', downscale=1).dataloader(test_ids=test_id, test_skip=opt.test_skip)
 
             max_epoch = np.ceil(opt.iters / len(train_loader)).astype(np.int32)
             trainer.train(train_loader, valid_loader, max_epoch)
 
             # also test
             # test_loader = NeRFDataset(opt, device=device, type='test').dataloader()
-            
+
             # if test_loader.has_gt:
             #     trainer.evaluate(test_loader) # blender has gt, so evaluate it.
-            
+
             # trainer.test(test_loader, write_video=True) # test and save video
 
             if opt.env_sph_mode and not opt.train_renv:
